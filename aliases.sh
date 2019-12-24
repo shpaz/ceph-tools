@@ -1,7 +1,7 @@
 #! /bin/bash 
 # Date: 24/12/2019 
 # Author: Shon Paz 
-# Description: This script performs pg log trimming for a given osd host 
+# Description: This script provides common commands in alis format to ease ceph day2day operations
 
 ##########################################################################
 
