@@ -1,0 +1,93 @@
+- name: creates logical volumes for the bucket index or fs journals on a single device. 
+  become: true
+  hosts: osds
+  
+  vars:
+    # Mapping of the SSD devices located in the OSD servers
+    ssd_devices:
+      sde:      
+        path: "/dev/sde"
+        size_in_gb: 25
+      sdf:
+        path: "/dev/sdf"
+        size_in_gb: 25
+
+    # Mapping of the HDD devices located in the OSD servers 
+    hdd_devices:
+      sdb:
+        path: "/dev/sdb"
+        size_in_gb: 30
+      sdc:
+        path: "/dev/sdc"
+        size_in_gb: 30
+   
+    # Metadata information 
+    metadata_percentage: 0.1 
+    nvme_device: "/dev/sdd"
+    nvme_vg_name: "{{ nvme_device.split('/')[2] }}-vg-metadata"
+
+  tasks:
+  
+  # ensure nvme_device is set
+  - name: fail if nvme_device is not defined
+    fail:
+      msg: "nvme_device has not been set by the user"
+    when: nvme_device is undefined or nvme_device == 'dummy'
+
+  # need to check if lvm2 is installed
+  - name: install lvm2
+    package:
+      name: lvm2
+      state: present
+    register: result
+    until: result is succeeded
+
+  # Make entire nvme device a VG
+  - name: add nvme device as lvm pv
+    lvg:
+      force: yes
+      pvs: "{{ nvme_device }}"
+      pesize: 4
+      state: present
+      vg: "{{ nvme_vg_name }}"
+
+  - name: create lvs for bluestore metadata for data disks on nvme device
+    lvol:
+      lv: "{{ item.key }}-metadata"
+      vg: "{{ nvme_vg_name }}"
+      size: "{{ item.value.size_in_gb * metadata_percentage }}g"
+      pvs: "{{ nvme_device }}"
+    with_dict: 
+    - "{{ ssd_devices }}" 
+    - "{{ hdd_devices }}"
+
+  # Make entire data device a VG
+  - name: add data device as lvm pv
+    lvg:
+      force: yes
+      pvs: "{{ item.value.path }}"
+      pesize: 4
+      state: present
+      vg: "{{ item.key }}-data"
+    with_dict:
+    - "{{ ssd_devices }}"
+    - "{{ hdd_devices }}"
+  
+  # Create entire data device LV
+  - name: create lvs for data devices 
+    lvol:
+      lv: "{{ item.key }}-data"
+      vg: "{{ item.key }}-data"
+      size: 100%FREE
+      pvs: "{{ item.value.path }}"
+    with_dict:
+    - "{{ ssd_devices }}"
+    - "{{ hdd_devices }}"
+
+  # Generate an osd.yml file
+  - name: generate osds.yml based on the given information 
+    template:
+      src: osds.yml.log.j2
+      dest: group_vars/osds.yml
+    delegate_to: localhost
+

@@ -1,0 +1,45 @@
+---
+dummy:
+
+lvm_volumes:
+  - data: sde-data
+    data_vg: sde-data
+    db: sde-metadata
+    db_vg: sdd-vg-metadata
+    crush_device_class: ssd
+  - data: sdf-data
+    data_vg: sdf-data
+    db: sdf-metadata
+    db_vg: sdd-vg-metadata
+    crush_device_class: ssd
+  - data: sdb-data
+    data_vg: sdb-data
+    db: sdb-metadata
+    db_vg: sdd-vg-metadata
+    crush_device_class: hdd
+  - data: sdc-data
+    data_vg: sdc-data
+    db: sdc-metadata
+    db_vg: sdd-vg-metadata
+    crush_device_class: hdd
+
+crush_rule_config: true
+
+crush_rule_hdd:
+  name: HDD
+  root: default
+  type: host
+  class: hdd
+  default: true
+
+crush_rule_ssd:
+  name: SSD
+  root: default
+  type: host
+  class: ssd
+  default: false
+
+
+crush_rules:
+  - "{{ crush_rule_hdd }}"
+  - "{{ crush_rule_ssd }}"

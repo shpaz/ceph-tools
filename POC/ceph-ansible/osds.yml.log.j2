@@ -1,0 +1,40 @@
+---
+dummy:
+
+lvm_volumes:
+{% for key,value in ssd_devices.items() %}
+  - data: {{ key }}-data
+    data_vg: {{ key }}-data
+    db: {{ key }}-metadata
+    db_vg: {{ nvme_vg_name }}
+    crush_device_class: ssd
+{% endfor %}
+{% for key,value in hdd_devices.items() %}
+  - data: {{ key }}-data
+    data_vg: {{ key }}-data
+    db: {{ key }}-metadata
+    db_vg: {{ nvme_vg_name }}
+    crush_device_class: hdd
+{% endfor %}
+
+crush_rule_config: true
+
+crush_rule_hdd:
+  name: HDD
+  root: default
+  type: host
+  class: hdd
+  default: true
+
+crush_rule_ssd:
+  name: SSD
+  root: default
+  type: host
+  class: ssd
+  default: false
+
+{% raw %}
+crush_rules:
+  - "{{ crush_rule_hdd }}"
+  - "{{ crush_rule_ssd }}"
+{% endraw %}
